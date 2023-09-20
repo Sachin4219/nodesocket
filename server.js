@@ -25,50 +25,49 @@ const {
 } = require("./utils/users");
 
 const port = process.env.PORT || 4000;
-const botname = "Chaton Bot :";
+const botname = "Arbitrator Bot :";
 
 io.on("connection", (socket) => {
   socket.on("joinRoom", ({ username, room }) => {
-    const user = userJoin(socket.id, username, room);
-    socket.join(user.room);
-
+    console.log("user joined room", username, room);
+    const user = userJoin(username, room);
+    socket.join(room);
+    console.log(getRoomUsers(room));
     //when a new user connects
     socket.emit("message", formatMessage(botname, "Welcome to chaton"));
     socket.broadcast
-      .to(user.room)
+      .to(room)
       .emit(
         "message",
-        formatMessage(botname, `${user.username} has joined the chat`)
+        formatMessage(botname, `${username} has joined the chat`)
       );
 
-    io.to(user.room).emit("roomUsers", {
-      room: user.room,
-      users: getRoomUsers(user.room),
+    io.to(room).emit("roomUsers", {
+      room: room,
+      users: getRoomUsers(room),
     });
 
     //when a user disconnects
-    socket.on("disconnect", () => {
-      const user = userLeavesChat(socket.id);
-
-      if (user) {
-        io.to(user.room).emit(
-          "message",
-          formatMessage(botname, `${user.username} has left the chat`)
-        );
-      }
-
-      io.to(user.room).emit("roomUsers", {
-        room: user.room,
-        users: getRoomUsers(user.room),
+    socket.on("disconnect", (username, room) => {
+      const user = userLeavesChat(username);
+      // if (user) {
+      io.to(room).emit(
+        "message",
+        formatMessage(botname, `${username} has left the chat`)
+      );
+      // }
+      io.to(room).emit("roomUsers", {
+        room: room,
+        users: getRoomUsers(room),
       });
     });
   });
 
   //listen for chatMessage
-  socket.on("chatMessage", (message) => {
+  socket.on("chatMessage", ({ username, message, room }) => {
     try {
-      const user = getCurrentUser(socket.id);
-      io.to(user.room).emit("message", formatMessage(user.username, message));
+      // const user = getCurrentUser(username);
+      io.to(room).emit("message", formatMessage(username, message));
     } catch (err) {
       console.log(err);
     }
